@@ -1,5 +1,6 @@
 import argparse
 import sys
+import heapq
 
 def read_file():
     parser = argparse.ArgumentParser(description="Process user-provided file.")
@@ -21,9 +22,20 @@ def read_file():
     
     return content, args
 
+class Node:
+    def __init__(self, freq, char):
+        self.freq = freq
+        self.char = char
+        self.left = None
+        self.right = None
+
+    def __lt__(self, other):
+        return self.freq < other.freq
+
 class Compressor:
     def __init__(self, data):
         self.data = data
+        self.mappings = {}
 
     def character_frequencies(self):
         freq_map = {}
@@ -35,7 +47,42 @@ class Compressor:
                 freq_map[char] = 1
         
         return freq_map
+    
+    def build_tree(self):
+        heap = []
+        freq_map = self.character_frequencies()
+        for char, freq in freq_map.items():
+            n = Node(freq, char)
+            heapq.heappush(heap, n)
+        
+        while len(heap) > 1:
+            lf1 = heapq.heappop(heap)
+            lf2 = heapq.heappop(heap)
 
+            pf = lf1.freq + lf2.freq
+            pn = Node(pf, char=None)
+            pn.left = lf1
+            pn.right = lf2
+
+            heapq.heappush(heap, pn)
+        # print(heap[0].freq) == 8
+        return heap[0]
+    
+    def prefix_code(self, curr_node, code_str=''):
+
+        if not curr_node.left and not curr_node.right:
+            self.mappings[curr_node.char] = code_str
+
+        if curr_node.left:
+            self.prefix_code(curr_node.left, code_str + '0')
+
+        if curr_node.right:
+            self.prefix_code(curr_node.right, code_str + '1')
+            
+        # print(self.mappings)
+        return self.mappings
+
+        
 def main():
     data, args = read_file()
     if data is None:
@@ -43,6 +90,8 @@ def main():
 
     c = Compressor(data)
     freq_map = c.character_frequencies()
+    tree = c.build_tree()
+    c.prefix_code(tree)
 
     # optional debug logging:
     if args and args.debug:

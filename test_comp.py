@@ -10,3 +10,6 @@ def compress():
 
 def test_character_frequencies(compress):
     assert compress.character_frequencies() == {'s': 1, 'x': 1, 'e': 2, 't': 4}
+
+def test_build_tree(compress):
+    assert compress.build_tree().freq == 8
