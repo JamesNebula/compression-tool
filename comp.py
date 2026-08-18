@@ -37,6 +37,7 @@ class Compressor:
     def __init__(self, data):
         self.data = data
         self.mappings = {}
+        self.padding = 0
 
     def character_frequencies(self):
         freq_map = {}
@@ -100,6 +101,19 @@ class Compressor:
 
         return 
     
+    def encode_text(self):
+        result = ''
+        
+        for char in self.data:
+            result += self.mappings[char]
+
+        if len(result) % 8 != 0:
+            leftover = (8 - (len(result)) % 8)
+            self.padding = leftover
+            result += self.padding  * '0'
+        
+        return result
+    
 def main():
     data, args = read_file()
     if data is None:
@@ -109,6 +123,7 @@ def main():
     freq_map = c.character_frequencies()
     tree = c.build_tree()
     c.prefix_code(tree)
+    c.encode_text()
     
     if args.output:
         c.write_header(freq_map, args.output)
