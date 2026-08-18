@@ -112,8 +112,13 @@ class Compressor:
             self.padding = leftover
             result += self.padding  * '0'
         
-        return result
-    
+        byte_collection = []
+        for b in range(0, len(result), 8):
+            byte = int(result[b:b+8], 2)
+            byte_collection.append(byte)
+        
+        return bytes(byte_collection)
+
 def main():
     data, args = read_file()
     if data is None:
@@ -125,8 +130,8 @@ def main():
     c.prefix_code(tree)
     c.encode_text()
     
-    if args.output:
-        c.write_header(freq_map, args.output)
+    if args.output: # type: ignore
+        c.write_header(freq_map, args.output) # type: ignore
 
     # optional debug logging:
     if args and args.debug:
