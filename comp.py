@@ -6,6 +6,7 @@ def read_file():
     parser = argparse.ArgumentParser(description="Process user-provided file.")
     parser.add_argument("filename", help="The path of the file you wish to process.")
     parser.add_argument("-d", "--debug", action="store_true", help="Print the frequecy table.")
+    parser.add_argument("-o", "--output", required=True, help="Path to the output file.")
 
     args = parser.parse_args()
 
@@ -19,7 +20,7 @@ def read_file():
     if not content:
         print("No data in file.")
         return None, None
-    
+
     return content, args
 
 class Node:
@@ -81,8 +82,24 @@ class Compressor:
             
         # print(self.mappings)
         return self.mappings
+    
+    def write_header(self, freq_map, output_file):
 
-        
+        try:
+            with open(output_file, 'wb') as f:
+                entries = len(freq_map)
+                encoded_entries = str(entries).encode()
+                f.write(encoded_entries)
+                for char, freq in freq_map.items():
+                    header_str = f"\n{char} {freq}"
+                    encoded_str = header_str.encode()
+                    f.write(encoded_str)
+
+        except Exception as e:
+            print(f"Error writing to file: {e}")
+
+        return 
+    
 def main():
     data, args = read_file()
     if data is None:
@@ -92,12 +109,15 @@ def main():
     freq_map = c.character_frequencies()
     tree = c.build_tree()
     c.prefix_code(tree)
+    
+    if args.output:
+        c.write_header(freq_map, args.output)
 
     # optional debug logging:
     if args and args.debug:
         print("\n--- Frequency Table ---")
         for char, count in sorted(freq_map.items(), key=lambda item: item[1], reverse=True):
-            print(f"{repr(char)}: {count}")
+            print(f"{repr(char)}: {count}") 
 
 if __name__ == "__main__":
     main()
