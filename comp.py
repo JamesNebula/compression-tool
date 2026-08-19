@@ -84,7 +84,7 @@ class Compressor:
         # print(self.mappings)
         return self.mappings
     
-    def write_header(self, freq_map, output_file):
+    def write_compressed_data(self, freq_map, comp_bytes, output_file):
 
         try:
             with open(output_file, 'wb') as f:
@@ -96,25 +96,31 @@ class Compressor:
                     encoded_str = header_str.encode()
                     f.write(encoded_str)
 
+                padding_count = bytes([self.padding])
+                f.write(padding_count)
+                f.write(comp_bytes)
+
         except Exception as e:
             print(f"Error writing to file: {e}")
 
         return 
-    
+
     def encode_text(self):
-        result = ''
+        result = []
         
         for char in self.data:
-            result += self.mappings[char]
+            result.append(self.mappings[char]) 
+        
+        result_str = "".join(result)
 
-        if len(result) % 8 != 0:
-            leftover = (8 - (len(result)) % 8)
+        if len(result_str) % 8 != 0:
+            leftover = (8 - (len(result_str)) % 8)
             self.padding = leftover
-            result += self.padding  * '0'
+            result_str += self.padding  * '0'
         
         byte_collection = []
-        for b in range(0, len(result), 8):
-            byte = int(result[b:b+8], 2)
+        for b in range(0, len(result_str), 8):
+            byte = int(result_str[b:b+8], 2)
             byte_collection.append(byte)
         
         return bytes(byte_collection)
@@ -123,15 +129,13 @@ def main():
     data, args = read_file()
     if data is None:
         sys.exit(1)
-
+        
     c = Compressor(data)
     freq_map = c.character_frequencies()
     tree = c.build_tree()
     c.prefix_code(tree)
-    c.encode_text()
-    
-    if args.output: # type: ignore
-        c.write_header(freq_map, args.output) # type: ignore
+    comp_bytes = c.encode_text()
+    c.write_compressed_data(freq_map, comp_bytes, args.output) 
 
     # optional debug logging:
     if args and args.debug:
