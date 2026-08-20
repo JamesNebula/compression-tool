@@ -215,7 +215,25 @@ class Compressor:
             return clean_str
         else:
             return bit_str
+        
+    def decode_text(self, bit_str, tree):
+        current = tree
+        result = []
+        for bit in bit_str:
 
+            if bit == '0':
+                current = current.left
+            
+            if bit == '1':
+                current = current.right
+            
+            if not current.left and not current.right:
+                result.append(current.char)
+                current = tree
+        
+        d_string = "".join(result)
+        return d_string
+    
 def main():
     data, args = read_file()
     if data is None:
