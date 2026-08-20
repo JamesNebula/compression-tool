@@ -13,6 +13,6 @@
 - Binary serialisation with a custom header format
 
 # Usage
-- **python comp.py input.txt -o compressed.bin**
-- **python comp.py compressed.bin -d -o output.txt**
-- **python comp.py input.txt -o compressed.bin -ft**
+- `python comp.py input.txt -o compressed.bin`
+- `python comp.py compressed.bin -d -o output.txt`
+- `python comp.py input.txt -o compressed.bin -ft`
