@@ -64,9 +64,9 @@ class Compressor:
         
         return freq_map
     
-    def build_tree(self):
+    def build_tree(self, freq_map):
         heap = []
-        freq_map = self.character_frequencies()
+     
         for char, freq in freq_map.items():
             n = Node(freq, char)
             heapq.heappush(heap, n)
@@ -195,6 +195,26 @@ class Compressor:
                 frequency[char] = freq
 
                 current_pos = next_nl_idx
+                
+    def extract_data(self, data, header_end):
+        padding_byte = data[header_end]
+        data_content = data[header_end+1:]
+
+        return padding_byte, data_content
+    
+    def bytes_to_bits(self, data_content, padding_byte):
+        result = []
+        for byte in data_content:
+            binary_string = f"{byte:08b}"
+            result.append(binary_string)
+        
+        bit_str = "".join(result)
+
+        if padding_byte != 0:
+            clean_str = bit_str[:-padding_byte]
+            return clean_str
+        else:
+            return bit_str
 
 def main():
     data, args = read_file()
@@ -203,7 +223,7 @@ def main():
 
     c = Compressor(data)
     freq_map = c.character_frequencies()
-    tree = c.build_tree()
+    tree = c.build_tree(freq_map)
     c.prefix_code(tree)
     comp_bytes = c.encode_text()
     c.write_compressed_data(freq_map, comp_bytes, args.output)  # type: ignore
