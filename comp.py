@@ -23,6 +23,20 @@ def read_file():
 
     return content, args
 
+def read_compressed_file(filepath):
+    try:
+        with open(filepath, 'rb') as f:
+            content = f.read()
+    except FileNotFoundError:
+        print(f"The file '{filepath}' does not exist")
+        return None
+
+    if not content:
+        print("No data in file.")
+        return None
+
+    return content        
+
 class Node:
     def __init__(self, freq, char):
         self.freq = freq
@@ -70,6 +84,9 @@ class Compressor:
         # print(heap[0].freq) == 8
         return heap[0]
     
+    # ============
+    # Compress
+    # ============
     def prefix_code(self, curr_node, code_str=''):
 
         if not curr_node.left and not curr_node.right:
@@ -124,18 +141,72 @@ class Compressor:
             byte_collection.append(byte)
         
         return bytes(byte_collection)
+    
+    # ============
+    # Decompress
+    # ============
+
+    # b"4\nt 4\ne 2\ns 1\nx 1"  ← header looks like this for "testtext"
+    def parse_header(self, data):
+        # get entry count
+        nl_idx = data.find(b'\n')
+        entry = data[0:nl_idx]
+        string_data = entry.decode()
+
+        entry_count = int(string_data)
+
+        # get each entry 
+        frequency = {}
+        current_pos = nl_idx
+
+        for i in range(entry_count):
+
+            if i == entry_count - 1:
+                last_entry_space = data.find(b' ', current_pos+1)
+                last_entry_char = data[current_pos+1:last_entry_space]
+
+                freq_start_pos = last_entry_space + 1
+
+                position = freq_start_pos
+
+                while position < len(data) and chr(data[position]).isdigit():
+                    position += 1
+        
+                header_end = position
+                    
+                last_entry_freq = data[freq_start_pos:header_end]
+                char_str = last_entry_char.decode()
+                freq_str = last_entry_freq.decode()
+                freq_int = int(freq_str)
+                frequency[char_str] = freq_int
+
+                return (frequency, header_end)
+
+            else:
+                next_nl_idx = data.find(b'\n', current_pos+1)
+                next_entry = data[current_pos+1:next_nl_idx]
+                entry_str = next_entry.decode()
+
+                entry_spl = entry_str.split()
+
+                char = entry_spl[0]
+                freq = int(entry_spl[1])
+
+                frequency[char] = freq
+
+                current_pos = next_nl_idx
 
 def main():
     data, args = read_file()
     if data is None:
         sys.exit(1)
-        
+
     c = Compressor(data)
     freq_map = c.character_frequencies()
     tree = c.build_tree()
     c.prefix_code(tree)
     comp_bytes = c.encode_text()
-    c.write_compressed_data(freq_map, comp_bytes, args.output) 
+    c.write_compressed_data(freq_map, comp_bytes, args.output)  # type: ignore
 
     # optional debug logging:
     if args and args.debug:
