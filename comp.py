@@ -2,26 +2,31 @@ import argparse
 import sys
 import heapq
 
-def read_file():
+def parse_arguments():
     parser = argparse.ArgumentParser(description="Process user-provided file.")
-    parser.add_argument("filename", help="The path of the file you wish to process.")
-    parser.add_argument("-d", "--debug", action="store_true", help="Print the frequecy table.")
+    parser.add_argument("filename", help="The path of the file you wish to process. Output filename also required.")
+    parser.add_argument("-ft", "--frequencytable", action="store_true", help="Print the frequecy table.")
+    parser.add_argument("-d", "--decompress", action="store_true", help="Decompress the file. Output filename also required.")
     parser.add_argument("-o", "--output", required=True, help="Path to the output file.")
 
     args = parser.parse_args()
 
+    return args
+
+def read_file(filepath):
+    
     try:
-        with open(args.filename, 'r', encoding='utf-8') as f:
+        with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
     except FileNotFoundError:
-        print(f"Error: The file '{args.filename}' does not exist.")
-        return None, None
+        print(f"Error: The file '{filepath}' does not exist.")
+        return None
     
     if not content:
         print("No data in file.")
-        return None, None
+        return None
 
-    return content, args
+    return content
 
 def read_compressed_file(filepath):
     try:
@@ -109,7 +114,7 @@ class Compressor:
                 encoded_entries = str(entries).encode()
                 f.write(encoded_entries)
                 for char, freq in freq_map.items():
-                    header_str = f"\n{char} {freq}"
+                    header_str = f"\0{char} {freq}"
                     encoded_str = header_str.encode()
                     f.write(encoded_str)
 
@@ -146,10 +151,9 @@ class Compressor:
     # Decompress
     # ============
 
-    # b"4\nt 4\ne 2\ns 1\nx 1"  ← header looks like this for "testtext"
     def parse_header(self, data):
         # get entry count
-        nl_idx = data.find(b'\n')
+        nl_idx = data.find(b'\0')
         entry = data[0:nl_idx]
         string_data = entry.decode()
 
@@ -183,11 +187,11 @@ class Compressor:
                 return (frequency, header_end)
 
             else:
-                next_nl_idx = data.find(b'\n', current_pos+1)
+                next_nl_idx = data.find(b'\0', current_pos+1)
                 next_entry = data[current_pos+1:next_nl_idx]
                 entry_str = next_entry.decode()
 
-                entry_spl = entry_str.split()
+                entry_spl = entry_str.rsplit(' ', 1)
 
                 char = entry_spl[0]
                 freq = int(entry_spl[1])
@@ -234,23 +238,59 @@ class Compressor:
         d_string = "".join(result)
         return d_string
     
+    def write_decompressed_data(self, decoded_text, output_file):
+
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(decoded_text)
+        except Exception as e:
+            print(f"Failed writing decoded text to file: {e}")
+
+        return
+
+    
 def main():
-    data, args = read_file()
-    if data is None:
-        sys.exit(1)
+    args = parse_arguments()
 
-    c = Compressor(data)
-    freq_map = c.character_frequencies()
-    tree = c.build_tree(freq_map)
-    c.prefix_code(tree)
-    comp_bytes = c.encode_text()
-    c.write_compressed_data(freq_map, comp_bytes, args.output)  # type: ignore
+    # Decompress
+    if args.decompress:
+        data = read_compressed_file(args.filename)
+        
+        if data is None:
+            sys.exit(1)
 
-    # optional debug logging:
-    if args and args.debug:
-        print("\n--- Frequency Table ---")
-        for char, count in sorted(freq_map.items(), key=lambda item: item[1], reverse=True):
-            print(f"{repr(char)}: {count}") 
+        decompressor = Compressor(data)
+        freq_dict, header_end = decompressor.parse_header(data)
+        padding_byte, data_content = decompressor.extract_data(data, header_end)
+        b2b = decompressor.bytes_to_bits(data_content, padding_byte)
+        tree = decompressor.build_tree(freq_dict)
+        decoded_str = decompressor.decode_text(b2b, tree)
+        decompressor.write_decompressed_data(decoded_str, args.output)
+        print("Decompression successful.")
+        sys.exit(0)
 
+    # Compress
+    else:
+        data = read_file(args.filename)
+
+        if data is None:
+            sys.exit(1)
+    
+        compressor = Compressor(data)
+        freq_map = compressor.character_frequencies()
+        tree = compressor.build_tree(freq_map)
+        compressor.prefix_code(tree)
+        comp_bytes = compressor.encode_text()
+        compressor.write_compressed_data(freq_map, comp_bytes, args.output)  # type: ignore
+
+        if args.frequencytable:
+            print("\n--- Frequency Table ---")
+            for char, count in sorted(freq_map.items(), key=lambda item: item[1], reverse=True):
+                print(f"{repr(char)}: {count}") 
+
+        print("Compression successful.")
+        sys.exit(0)
+
+    
 if __name__ == "__main__":
     main()
