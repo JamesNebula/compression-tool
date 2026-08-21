@@ -2,6 +2,10 @@ import argparse
 import sys
 import heapq
 
+# ==============
+# CLI Args
+# ==============
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process user-provided file.")
     parser.add_argument("filename", help="The path of the file you wish to process. Output filename also required.")
@@ -12,6 +16,10 @@ def parse_arguments():
     args = parser.parse_args()
 
     return args
+
+# ==============
+# File Reading
+# ==============
 
 def read_file(filepath):
     
@@ -42,6 +50,10 @@ def read_compressed_file(filepath):
 
     return content        
 
+# ============================
+# Node class for Huffman Tree
+# ============================
+
 class Node:
     def __init__(self, freq, char):
         self.freq = freq
@@ -51,6 +63,10 @@ class Node:
 
     def __lt__(self, other):
         return self.freq < other.freq
+    
+# ===============
+# Compressor Tool
+# ===============
 
 class Compressor:
     def __init__(self, data):
@@ -248,7 +264,6 @@ class Compressor:
 
         return
 
-    
 def main():
     args = parse_arguments()
 
@@ -260,7 +275,7 @@ def main():
             sys.exit(1)
 
         decompressor = Compressor(data)
-        freq_dict, header_end = decompressor.parse_header(data)
+        freq_dict, header_end = decompressor.parse_header(data) # type: ignore
         padding_byte, data_content = decompressor.extract_data(data, header_end)
         b2b = decompressor.bytes_to_bits(data_content, padding_byte)
         tree = decompressor.build_tree(freq_dict)
@@ -291,6 +306,14 @@ def main():
         print("Compression successful.")
         sys.exit(0)
 
-    
 if __name__ == "__main__":
     main()
+
+# Test Compressor
+# python comp.py data/les_miserables.txt -o compressed.bin
+
+# Test Decompressor
+# python comp.py compressed.bin -d -o decompressed.txt
+
+# Test Decompressor with frequency table
+# python comp.py compressed.bin -d -ft -o decompressed.txt
